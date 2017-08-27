@@ -1,30 +1,36 @@
-def print_hr(cHandle, data):
-    #Connexion a la base de données
-    conn = sqlite3.connect('DatabaseIOT.db')
+# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
-    #Decomposition de data
-    bpm = ord(data[1])
-    rrByteOne = ord(data[2])
-    rrByteTwo = ord(data[3])
+import sqlite3, subprocess, time, datetime
+from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM, AssignedNumbers
 
-    #Conversion en binaire des valeurs de RR
-    rrByteOne = '{:08b}'.format(rrByteOne)
-    rrByteTwo ='{:08b}'.format(rrByteTwo)
+adresseMontre = "f9:eb:97:ee:2f:88"
+cccid = AssignedNumbers.client_characteristic_configuration
+hr =  AssignedNumbers.heart_rate
+hrm = AssignedNumbers.heart_rate_measurement
 
-    #Inversion des deux valeurs
-    rrReverse = float(int(rrByteTwo+rrByteOne,2))
+#Creation d'un objet Peripheral
+p = Peripheral()
+try:
+    #Connection au peripherique en passant son adresse en parametre
+    p.connect(adresseMontre, addrType=ADDR_TYPE_RANDOM)
+#Gestion des deconnexions
+except:
+    print "Erreur de connexion"
+    print "Reconnexion ..."
+    #Ecrase la connexion
+    subprocess.Popen(['sudo', 'hcitool', 'ledc','64'])
+    time.sleep(2)
+    print '...'
+    #Tentative de connexion
+    p.connect(adresseMontre, addrType=ADDR_TYPE_RANDOM)
+    print "..."
 
-    #Conversion du RR en millisecondes
-    rrInMs = (rrReverse / 1024) * 1000
+print "Connected "
 
-    #Insertion des données dans la BDD
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO MONTREWITHTIME(BPM, TIME, RRINTERVAL)
-    VALUES(?, datetime('now'), ?)""", (bpm, round(rrInMs,2)))
-    conn.commit()
-    conn.close()
+#Le handle 32 correspond a la caracteristique Heart Rate Measurement
+#\1\0 permet d'activer les notifications pour les montres MIO
+p.writeCharacteristic(32, '\1\0')
 
-    #round permet de definir le nombre de chiffre derriere la virgule
-    print "RR in ms: "+str(round(rrInMs,2))
-    print "BPM: " +str(bpm)
+while True:
+    p.waitForNotifications(3.)
