@@ -1,36 +1,32 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/env python
 
-import sqlite3, subprocess, time, datetime
-from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM, AssignedNumbers
+adressTable = ["50:8c:b1:6a:02:f7","d4:36:39:db:13:da","50:8c:b1:69:d2:d1","50:8c:b1:69:f9:45","d4:36:39:db:3b:9d"]
+compteur = 0
+#Creation et demarrage differents threads en fonction des adresses insérées dans la liste adressTable.
+for adress in adressTable:
+    thread_[compteur] =  MultiplesConnexion(adress)
+    thread_[compteur].start()
+    compteur += 1
+    
+#Declaration d'une classe pour le threading
+class MultiplesConnexion(Thread):
+	#Constructeur qui prend en parametre l'adresse du peripherique a connecter
+	def __init__(self, adresse):
+		#Initialisation du thread
+		Thread.__init__(self)
+		self.adresse = adresse
 
-adresseMontre = "f9:eb:97:ee:2f:88"
-cccid = AssignedNumbers.client_characteristic_configuration
-hr =  AssignedNumbers.heart_rate
-hrm = AssignedNumbers.heart_rate_measurement
+	def run(self):
 
-#Creation d'un objet Peripheral
-p = Peripheral()
-try:
-    #Connection au peripherique en passant son adresse en parametre
-    p.connect(adresseMontre, addrType=ADDR_TYPE_RANDOM)
-#Gestion des deconnexions
-except:
-    print "Erreur de connexion"
-    print "Reconnexion ..."
-    #Ecrase la connexion
-    subprocess.Popen(['sudo', 'hcitool', 'ledc','64'])
-    time.sleep(2)
-    print '...'
-    #Tentative de connexion
-    p.connect(adresseMontre, addrType=ADDR_TYPE_RANDOM)
-    print "..."
-
-print "Connected "
-
-#Le handle 32 correspond a la caracteristique Heart Rate Measurement
-#\1\0 permet d'activer les notifications pour les montres MIO
-p.writeCharacteristic(32, '\1\0')
-
-while True:
-    p.waitForNotifications(3.)
+			#Creation d'un objet Peripheral
+			p = Peripheral()
+			try:
+				#Connection au peripherique en passant son adresse en parametre
+				p.connect(self.adresse)
+			except:
+				print "Erreur connexion"
+				subprocess.Popen(['sudo', 'hcitool', 'ledc','64'])
+				subprocess.Popen(['sudo', 'hcitool', 'ledc','65'])
+				time.sleep(2)
+				p.connect(self.adresse)
+            #Le peripherique est connecté on peut maintenant lui communiquer/recupérer des valeurs.
+			print("Connect devices : " + str(self.adresse))
